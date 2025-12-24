@@ -33,19 +33,13 @@ jobs:
     - name: Build with dotnet
       run: dotnet build --configuration Release
 
-    - name: Zip build output
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-      shell: pwsh
-      run: |
-        Compress-Archive -Path .\TourAlert\bin\x64\Release\* -DestinationPath latest.zip
-
     - name: Release
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       uses: softprops/action-gh-release@v2
       with:
         tag_name: latest
         name: Latest Release
-        files: latest.zip
+        files: .\TourAlert\bin\x64\Release\latest.zip
         body: |
           Automatic release from master branch.
         prerelease: false
