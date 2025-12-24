@@ -39,7 +39,7 @@ jobs:
       with:
         tag_name: latest
         name: Latest Release
-        files: .\TourAlert\bin\x64\Release\latest.zip
+        files: .\TourAlert\bin\Release\TourAlert\latest.zip
         body: |
           Automatic release from master branch.
         prerelease: false
@@ -51,7 +51,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: TourAlert
-        path: .\TourAlert\bin\x64\Release\*
+        path: .\TourAlert\bin\Release\**
         if-no-files-found: error
         retention-days: 1
 
