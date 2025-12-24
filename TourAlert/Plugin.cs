@@ -5,6 +5,12 @@ using System.IO;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
 using SamplePlugin.Windows;
+using System;
+using Dalamud.Game.Text;
+using SamplePlugin.Models;
+using SamplePlugin.Services;
+using NAudio.Wave;
+using System.Threading.Tasks;
 
 namespace SamplePlugin;
 
@@ -17,12 +23,16 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IPlayerState PlayerState { get; private set; } = null!;
     [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
+    [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
 
-    private const string CommandName = "/pmycommand";
+    public string Name => "TourAlert";
+    private const string CommandName = "/touralert";
 
     public Configuration Configuration { get; init; }
+    
+    private readonly NotificationService _notificationService;
 
-    public readonly WindowSystem WindowSystem = new("SamplePlugin");
+    public readonly WindowSystem WindowSystem = new("TourAlert");
     private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
 
@@ -33,9 +43,16 @@ public sealed class Plugin : IDalamudPlugin
         // You might normally want to embed resources and load them from the manifest stream
         var goatImagePath = Path.Combine(PluginInterface.AssemblyLocation.Directory?.FullName!, "goat.png");
 
-        ConfigWindow = new ConfigWindow(this);
+        // Initialize the NotificationService first
+        _notificationService = new NotificationService();
+        _notificationService.MessageReceived += OnMessageReceived;
+        _notificationService.ConnectAsync(new Uri("ws://192.168.2.35:8080/ws"));
+
+        // Now initialize the windows, passing the service
+        ConfigWindow = new ConfigWindow(this, _notificationService);
         MainWindow = new MainWindow(this, goatImagePath);
 
+        // Add windows to the WindowSystem
         WindowSystem.AddWindow(ConfigWindow);
         WindowSystem.AddWindow(MainWindow);
 
@@ -44,20 +61,53 @@ public sealed class Plugin : IDalamudPlugin
             HelpMessage = "A useful message to display in /xlhelp"
         });
 
-        // Tell the UI system that we want our windows to be drawn through the window system
+        // Subscribe to the UI builder events
         PluginInterface.UiBuilder.Draw += WindowSystem.Draw;
-
-        // This adds a button to the plugin installer entry of this plugin which allows
-        // toggling the display status of the configuration ui
         PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUi;
-
-        // Adds another button doing the same but for the main ui of the plugin
         PluginInterface.UiBuilder.OpenMainUi += ToggleMainUi;
 
-        // Add a simple message to the log with level set to information
-        // Use /xllog to open the log window in-game
-        // Example Output: 00:57:54.959 | INF | [SamplePlugin] ===A cool log message from Sample Plugin===
+        // Add a simple message to the log
         Log.Information($"===A cool log message from {PluginInterface.Manifest.Name}===");
+    }
+    
+    public void PlaySelectedSoundEffect()
+    {
+        var soundFileName = Configuration.SelectedSoundEffect;
+        if (string.IsNullOrEmpty(soundFileName)) return;
+
+        var soundPath = Path.Combine(PluginInterface.AssemblyLocation.Directory?.FullName!, "sounds", soundFileName);
+
+        if (!File.Exists(soundPath))
+        {
+            Log.Error($"Sound file not found: {soundPath}");
+            return;
+        }
+
+        Task.Run(() =>
+        {
+            try
+            {
+                using var audioFile = new AudioFileReader(soundPath);
+                audioFile.Volume = Configuration.SoundVolume;
+                using var outputDevice = new WaveOutEvent();
+                outputDevice.Init(audioFile);
+                outputDevice.Play();
+                while (outputDevice.PlaybackState == PlaybackState.Playing)
+                {
+                    Task.Delay(100).Wait();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error playing sound effect.");
+            }
+        });
+    }
+
+    private void OnMessageReceived(DiscordMessage message)
+    {
+        ChatGui.Print($"[{message.Category}]: {message.Content}");
+        PlaySelectedSoundEffect();
     }
 
     public void Dispose()
@@ -73,6 +123,8 @@ public sealed class Plugin : IDalamudPlugin
         MainWindow.Dispose();
 
         CommandManager.RemoveHandler(CommandName);
+        
+        _notificationService.Dispose();
     }
 
     private void OnCommand(string command, string args)
