@@ -2,7 +2,7 @@
   "Author": "boringwolf",
   "Name": "TourAlert",
   "InternalName": "TourAlert",
-  "AssemblyVersion": "0.0.0.1",
+  "AssemblyVersion": "0.0.0.2",
   "Punchline": "接收遊戲內 A車/狩獵巡車警報通知。",
   "Description": "透過 WebSocket 接收狩獵巡車通知，並在收到訊息時播放提示音及顯示聊天訊息。使用 /touralert 開啟設定。",
   "ApplicableVersion": "any",

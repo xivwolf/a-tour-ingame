@@ -1,34 +1,46 @@
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
 namespace TourAlert.Models;
 
+public class RoleMention
+{
+    [JsonProperty("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonProperty("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonIgnore]
+    public string IdString => Id;
+}
+
 public class DiscordMessage
 {
-    [JsonPropertyName("content")]
+    [JsonProperty("content")]
     public string Content { get; set; } = string.Empty;
 
-    [JsonPropertyName("author")]
+    [JsonProperty("author")]
     public string Author { get; set; } = string.Empty;
 
-    [JsonPropertyName("author_id")]
+    [JsonProperty("author_id")]
     public object AuthorId { get; set; } = new();
 
-    [JsonPropertyName("timestamp")]
+    [JsonProperty("timestamp")]
     public string Timestamp { get; set; } = string.Empty;
 
-    [JsonPropertyName("attachments")]
+    [JsonProperty("attachments")]
     public List<string> Attachments { get; set; } = new();
 
-    [JsonPropertyName("category")]
+    [JsonProperty("category")]
     public string Category { get; set; } = string.Empty;
 
-    [JsonPropertyName("channel_name")]
+    [JsonProperty("channel_name")]
     public string ChannelName { get; set; } = string.Empty;
 
-    [JsonPropertyName("channel_id")]
+    [JsonProperty("channel_id")]
     public object ChannelId { get; set; } = new();
 
-    [JsonPropertyName("role_mentions")]
-    public List<object> RoleMentions { get; set; } = new();
+    [JsonProperty("role_mentions")]
+    public List<RoleMention> RoleMentions { get; set; } = new();
 }

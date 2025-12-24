@@ -11,6 +11,7 @@ using TourAlert.Models;
 using TourAlert.Services;
 using NAudio.Wave;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace TourAlert;
 
@@ -104,10 +105,26 @@ public sealed class Plugin : IDalamudPlugin
         });
     }
 
-    private void OnMessageReceived(DiscordMessage message)
+    private void OnMessageReceived(DiscordMessage message, string rawJson)
     {
-        ChatGui.Print($"[{message.Category}]: {message.Content}");
-        PlaySelectedSoundEffect();
+        // Extract role IDs from mentions using the string Id property
+        var mentionedRoleIds = message.RoleMentions.Select(r => r.Id).ToList();
+        
+        Log.Information($"Received message Category: {message.Category}. Mentions: {string.Join(", ", mentionedRoleIds)}");
+        Log.Debug($"Raw JSON: {rawJson}");
+
+        bool shouldNotify = false;
+
+        if (Configuration.Enable7ANotify && mentionedRoleIds.Contains(Configuration.Role7A)) shouldNotify = true;
+        if (Configuration.Enable6ANotify && mentionedRoleIds.Contains(Configuration.Role6A)) shouldNotify = true;
+        if (Configuration.Enable5ANotify && mentionedRoleIds.Contains(Configuration.Role5A)) shouldNotify = true;
+        if (Configuration.EnableTestNotify && mentionedRoleIds.Contains(Configuration.RoleTest)) shouldNotify = true;
+
+        if (shouldNotify)
+        {
+            ChatGui.Print($"[{message.Category}]: {message.Content}");
+            PlaySelectedSoundEffect();
+        }
     }
 
     public void Dispose()

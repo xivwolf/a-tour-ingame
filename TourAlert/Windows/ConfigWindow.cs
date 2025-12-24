@@ -20,7 +20,7 @@ public class ConfigWindow : Window, IDisposable
         Flags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
                 ImGuiWindowFlags.NoScrollWithMouse;
 
-        Size = new Vector2(232, 200); // Reduced height slightly
+        Size = new Vector2(232, 320); // Increased height for test option
         SizeCondition = ImGuiCond.Always;
 
         configuration = plugin.Configuration;
@@ -39,6 +39,37 @@ public class ConfigWindow : Window, IDisposable
         else
         {
             ImGui.Text("連線狀態: 未知");
+        }
+
+        ImGui.Separator();
+        ImGui.Text("通知過濾");
+
+        var enable7A = configuration.Enable7ANotify;
+        if (ImGui.Checkbox("啟用 7A 通報", ref enable7A))
+        {
+            configuration.Enable7ANotify = enable7A;
+            configuration.Save();
+        }
+
+        var enable6A = configuration.Enable6ANotify;
+        if (ImGui.Checkbox("啟用 6A 通報", ref enable6A))
+        {
+            configuration.Enable6ANotify = enable6A;
+            configuration.Save();
+        }
+
+        var enable5A = configuration.Enable5ANotify;
+        if (ImGui.Checkbox("啟用 5A 通報", ref enable5A))
+        {
+            configuration.Enable5ANotify = enable5A;
+            configuration.Save();
+        }
+
+        var enableTest = configuration.EnableTestNotify;
+        if (ImGui.Checkbox("啟用開發測試通報", ref enableTest))
+        {
+            configuration.EnableTestNotify = enableTest;
+            configuration.Save();
         }
 
         ImGui.Separator();

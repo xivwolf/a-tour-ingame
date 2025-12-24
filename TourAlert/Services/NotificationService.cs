@@ -1,7 +1,7 @@
 using System;
 using System.Net.WebSockets;
 using System.Text;
-using System.Text.Json;
+using Newtonsoft.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using TourAlert.Models;
@@ -15,7 +15,7 @@ public class NotificationService : IDisposable
     private Uri? _serverUri;
     private bool _disposed;
 
-    public event Action<DiscordMessage>? MessageReceived;
+    public event Action<DiscordMessage, string>? MessageReceived;
     public WebSocketState ConnectionState => _webSocket.State;
 
     public async Task ConnectAsync(Uri uri)
@@ -58,7 +58,7 @@ public class NotificationService : IDisposable
 
     private async Task ReceiveLoop(CancellationToken token)
     {
-        var buffer = new ArraySegment<byte>(new byte[4096]);
+        var buffer = new ArraySegment<byte>(new byte[8192]); // Increased buffer size
         try
         {
             while (_webSocket.State == WebSocketState.Open && !token.IsCancellationRequested)
@@ -68,10 +68,21 @@ public class NotificationService : IDisposable
                 {
                     if (buffer.Array == null) continue;
                     var json = Encoding.UTF8.GetString(buffer.Array, 0, result.Count);
-                    var message = JsonSerializer.Deserialize<DiscordMessage>(json);
-                    if (message != null)
+                    try 
                     {
-                        MessageReceived?.Invoke(message);
+                        var settings = new JsonSerializerSettings
+                        {
+                            FloatParseHandling = FloatParseHandling.Decimal
+                        };
+                        var message = JsonConvert.DeserializeObject<DiscordMessage>(json, settings);
+                        if (message != null)
+                        {
+                            MessageReceived?.Invoke(message, json);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log deserialization error if needed
                     }
                 }
                 else if (result.MessageType == WebSocketMessageType.Close)
