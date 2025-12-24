@@ -1,7 +1,7 @@
 ﻿using Dalamud.Configuration;
 using System;
 
-namespace SamplePlugin;
+namespace TourAlert;
 
 [Serializable]
 public class Configuration : IPluginConfiguration
