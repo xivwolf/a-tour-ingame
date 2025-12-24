@@ -1,6 +1,8 @@
 name: TourAlert PR Builder
 
 on:
+  push:
+    branches: [ master ]
   pull_request:
     branches: [ master ]
 
