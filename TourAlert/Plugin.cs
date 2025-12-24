@@ -122,7 +122,11 @@ public sealed class Plugin : IDalamudPlugin
 
         if (shouldNotify)
         {
-            ChatGui.Print($"[{message.Category}]: {message.Content}");
+            ChatGui.Print(new XivChatEntry
+            {
+                Type = XivChatType.Urgent,
+                Message = $"[{message.Category}]: {message.Content}"
+            });
             PlaySelectedSoundEffect();
         }
     }
