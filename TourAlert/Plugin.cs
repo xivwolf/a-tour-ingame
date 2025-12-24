@@ -4,15 +4,15 @@ using Dalamud.Plugin;
 using System.IO;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
-using SamplePlugin.Windows;
+using TourAlert.Windows;
 using System;
 using Dalamud.Game.Text;
-using SamplePlugin.Models;
-using SamplePlugin.Services;
+using TourAlert.Models;
+using TourAlert.Services;
 using NAudio.Wave;
 using System.Threading.Tasks;
 
-namespace SamplePlugin;
+namespace TourAlert;
 
 public sealed class Plugin : IDalamudPlugin
 {
@@ -46,7 +46,7 @@ public sealed class Plugin : IDalamudPlugin
         // Initialize the NotificationService first
         _notificationService = new NotificationService();
         _notificationService.MessageReceived += OnMessageReceived;
-        _notificationService.ConnectAsync(new Uri("ws://192.168.2.35:8080/ws"));
+        _notificationService.ConnectAsync(new Uri("wss://atour.bnsw.tech/ws"));
 
         // Now initialize the windows, passing the service
         ConfigWindow = new ConfigWindow(this, _notificationService);

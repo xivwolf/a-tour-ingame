@@ -2,9 +2,9 @@ using System;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
-using SamplePlugin.Services;
+using TourAlert.Services;
 
-namespace SamplePlugin.Windows;
+namespace TourAlert.Windows;
 
 public class ConfigWindow : Window, IDisposable
 {

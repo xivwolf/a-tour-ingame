@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace SamplePlugin.Models;
+namespace TourAlert.Models;
 
 public class DiscordMessage
 {
