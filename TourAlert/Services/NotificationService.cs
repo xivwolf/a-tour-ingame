@@ -21,8 +21,28 @@ public class NotificationService : IDisposable
     public async Task ConnectAsync(Uri uri)
     {
         _serverUri = uri;
-        _cancellationTokenSource = new CancellationTokenSource();
-        _ = Task.Run(() => ConnectionLoop(_cancellationTokenSource.Token));
+        
+        if (_cancellationTokenSource == null)
+        {
+            _cancellationTokenSource = new CancellationTokenSource();
+            _ = Task.Run(() => ConnectionLoop(_cancellationTokenSource.Token));
+        }
+        else
+        {
+            // If already running, force a reconnect with the new URI
+            if (_webSocket.State == WebSocketState.Open)
+            {
+                await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Reconnecting with new identity", CancellationToken.None);
+            }
+        }
+    }
+
+    public async Task DisconnectAsync()
+    {
+        if (_webSocket.State == WebSocketState.Open)
+        {
+            await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnecting", CancellationToken.None);
+        }
     }
 
     private async Task ConnectionLoop(CancellationToken token)
@@ -40,8 +60,11 @@ public class NotificationService : IDisposable
                         _webSocket = new ClientWebSocket();
                     }
 
-                    await _webSocket.ConnectAsync(_serverUri!, token);
-                    _ = ReceiveLoop(token);
+                    if (_serverUri != null)
+                    {
+                        await _webSocket.ConnectAsync(_serverUri, token);
+                        _ = ReceiveLoop(token);
+                    }
                 }
                 catch (Exception)
                 {
@@ -80,7 +103,7 @@ public class NotificationService : IDisposable
                             MessageReceived?.Invoke(message, json);
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         // Log deserialization error if needed
                     }

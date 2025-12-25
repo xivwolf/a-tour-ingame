@@ -12,6 +12,7 @@ using TourAlert.Services;
 using NAudio.Wave;
 using System.Threading.Tasks;
 using System.Linq;
+using Dalamud.Game.ClientState.Objects.SubKinds;
 
 namespace TourAlert;
 
@@ -25,6 +26,8 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
     [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
+    [PluginService] internal static IFramework Framework { get; private set; } = null!;
+    [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
 
     public string Name => "TourAlert";
     private const string CommandName = "/touralert";
@@ -36,6 +39,8 @@ public sealed class Plugin : IDalamudPlugin
     public readonly WindowSystem WindowSystem = new("TourAlert");
     private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
+    
+    private bool _hasConnected = false;
 
     public Plugin()
     {
@@ -47,7 +52,13 @@ public sealed class Plugin : IDalamudPlugin
         // Initialize the NotificationService first
         _notificationService = new NotificationService();
         _notificationService.MessageReceived += OnMessageReceived;
-        _notificationService.ConnectAsync(new Uri("wss://atour.bnsw.tech/ws"));
+        
+        // Initial connection attempt
+        Framework.Update += OnFrameworkUpdate;
+
+        // Subscribe to login/logout to update identity
+        ClientState.Login += OnLogin;
+        ClientState.Logout += OnLogout;
 
         // Now initialize the windows, passing the service
         ConfigWindow = new ConfigWindow(this, _notificationService);
@@ -70,6 +81,43 @@ public sealed class Plugin : IDalamudPlugin
         // Add a simple message to the log
         Log.Information($"===A cool log message from {PluginInterface.Manifest.Name}===");
     }
+
+    private void OnFrameworkUpdate(IFramework framework)
+    {
+        if (_hasConnected)
+        {
+            Framework.Update -= OnFrameworkUpdate;
+            return;
+        }
+        
+        _hasConnected = true;
+        Framework.Update -= OnFrameworkUpdate;
+        UpdateWebSocketConnection();
+    }
+    
+    private void UpdateWebSocketConnection()
+    {
+        // Use ObjectTable[0] to get the local player
+        if (ObjectTable.Length == 0 || ObjectTable[0] is not IPlayerCharacter player)
+        {
+            Log.Debug("LocalPlayer (ObjectTable[0]) is null or not a player, skipping WebSocket connection.");
+            return;
+        }
+
+        var name = player.Name.TextValue;
+        var world = player.HomeWorld.Value.Name.ToString();
+        var fullName = $"{name}@{world}";
+        
+        // Simple manual URI escaping for the name
+        var escapedName = Uri.EscapeDataString(fullName);
+        var uri = new Uri($"wss://atour.bnsw.tech/ws?username={escapedName}");
+        
+        Log.Information($"Connecting to WebSocket as: {fullName}");
+        _ = _notificationService.ConnectAsync(uri);
+    }
+
+    private void OnLogin() => UpdateWebSocketConnection();
+    private void OnLogout(int type, int code) => _ = _notificationService.DisconnectAsync();
     
     public void PlaySelectedSoundEffect()
     {
@@ -84,7 +132,7 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        Task.Run(() =>
+        _ = Task.Run(() =>
         {
             try
             {
@@ -133,6 +181,10 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        // Unregister events
+        ClientState.Login -= OnLogin;
+        ClientState.Logout -= OnLogout;
+
         // Unregister all actions to not leak anything during disposal of plugin
         PluginInterface.UiBuilder.Draw -= WindowSystem.Draw;
         PluginInterface.UiBuilder.OpenConfigUi -= ToggleConfigUi;
